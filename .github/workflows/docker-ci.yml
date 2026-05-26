@@ -1,0 +1,46 @@
+name: Docker Compose CI Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+
+  docker-compose-test:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Build and Start Containers
+        run: docker compose up --build -d
+
+      - name: Wait for Application Startup
+        run: sleep 20
+
+      - name: Check Running Containers
+        run: docker ps
+
+      - name: Test Health Endpoint
+        run: curl http://localhost:5000/health
+
+      - name: Test Add Job API
+        run: |
+          curl -X POST http://localhost:5000/jobs/add \
+          -H "Content-Type: application/json" \
+          -d '{"job_name":"github-actions-build","status":"SUCCESS","duration":120,"triggered_by":"github-actions"}'
+
+      - name: Validate Job Data
+        run: |
+          response=$(curl -s http://localhost:5000/jobs)
+
+          echo "$response"
+
+          echo "$response" | grep "github-actions-build"
+
+      - name: Stop Containers
+        run: docker compose down
