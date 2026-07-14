@@ -1,7 +1,8 @@
 from flask import Flask, request, jsonify
-from flask_sqlalchemy import SQLAlchemy
+from models import db, WorkflowRun
 from datetime import datetime
 import os
+import requests
 import time
 
 app = Flask(__name__)
@@ -13,24 +14,16 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv(
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-db = SQLAlchemy(app)
+db.init_app(app)
+GITHUB_OWNER = os.getenv("GITHUB_OWNER")
+GITHUB_REPO = os.getenv("GITHUB_REPO")
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 
-class Job(db.Model):
+GITHUB_API_URL = (
+    f"https://api.github.com/repos/"
+    f"{GITHUB_OWNER}/{GITHUB_REPO}/actions/runs"
+)
 
-    id = db.Column(db.Integer, primary_key=True)
-
-    job_name = db.Column(db.String(100), nullable=False)
-
-    status = db.Column(db.String(50), nullable=False)
-
-    duration = db.Column(db.Integer)
-
-    triggered_by = db.Column(db.String(100))
-
-    timestamp = db.Column(
-        db.DateTime,
-        default=datetime.utcnow
-    )
 
 @app.route("/")
 def home():
