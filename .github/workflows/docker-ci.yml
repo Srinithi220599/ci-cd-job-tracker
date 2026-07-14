@@ -10,6 +10,10 @@ jobs:
   docker-compose-test:
 
     runs-on: ubuntu-latest
+    env:
+      GITHUB_OWNER: ${{ vars.GH_OWNER }}
+      GITHUB_REPO: ${{ vars.GH_REPO }}
+      GITHUB_TOKEN: ${{ secrets.GH_PAT }}
 
     steps:
 
