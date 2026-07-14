@@ -30,8 +30,9 @@ jobs:
         run: docker ps
 
       - name: Verify GitHub Environment Variables
+        shell: powershell
         run: |
-          docker exec cicd-app printenv | grep GITHUB
+          docker exec cicd-app printenv | Select-String GITHUB
 
       - name: Test Health Endpoint
         run: curl http://localhost:5000/health
