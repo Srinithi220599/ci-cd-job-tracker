@@ -1,225 +1,102 @@
 # CI/CD Job Tracker (Containerized)
 
-Interview-focused revision notes for a simple CI/CD job tracking platform built with Flask + PostgreSQL and run using Docker Compose.
+An interview-ready showcase of a containerized **Flask + PostgreSQL** application, designed to track GitHub Action workflows. This repository demonstrates core DevOps concepts: **multi-container orchestration, data persistence, network isolation, and automated CI pipelines**.
 
-## 1. Project Goal
+---
 
-This project tracks CI/CD jobs (build/deploy/test runs) and exposes APIs to:
+## 🏗️ Architecture
 
-- Add a new job record
-- List all jobs
-- Get job statistics (success/failure rate)
-- Check app health
-
-## 2. Tech Stack
-
-- Python 3.11 (Flask)
-- PostgreSQL 15
-- SQLAlchemy / Flask-SQLAlchemy
-- Docker + Docker Compose
-
-## 3. Architecture (Quick View)
-
-- `app` service: Flask API, listens on port `5000`
-- `db` service: PostgreSQL, listens on port `5432`
-- Persistent volume: `postgres_data` keeps DB data across restarts
-
-Flow:
-
-1. Docker Compose starts `db` and `app`.
-2. Flask app uses `DATABASE_URL` to connect to PostgreSQL.
-3. On startup, the app creates tables automatically.
-4. APIs read/write job data in PostgreSQL.
-
-## 4. Repository Files
-
-- `app.py`: Flask API and data model
-- `Dockerfile`: Python image build instructions
-- `docker-compose.yml`: Multi-container setup (app + db)
-- `requirements.txt`: Python dependencies
-- `README.md`: This guide
-
-## 5. Prerequisites
-
-Install the following on your system:
-
-- Docker Desktop (Docker Engine + Docker Compose)
-- Git (optional, for cloning)
-
-Verify installation:
-
-```bash
-docker --version
-docker compose version
+```mermaid
+graph TD
+    Client["Client / Browser (localhost:5000)"]
+    
+    subgraph "Docker Compose Setup"
+        AppContainer["Flask API Container (cicd-app)"]
+        DbContainer["PostgreSQL Container (postgres-db:5432)"]
+        Volume[("Docker Volume (postgres_data)")]
+    end
+    
+    Client -->|Port 5000:5000| AppContainer
+    AppContainer -->|Internal TCP Network| DbContainer
+    DbContainer ==>|Persists Data| Volume
 ```
 
-## 6. Start From Scratch
+### 1. Services
+*   **API Service (`cicd-app`)**: A Python 3.11 Flask API running on port `5000`. It connects to PostgreSQL using SQLAlchemy to manage Workflow runs and exposes status/config endpoints.
+*   **Database Service (`postgres-db`)**: A Postgres 15 database instance listening internally on port `5432`.
+*   **Volume (`postgres_data`)**: Map directory `/var/lib/postgresql/data` from the DB container to hold tables and data robustly across restarts.
 
-### Step 1: Clone and move into project
+---
 
+## 🚀 Quick Start (1-Minute Setup)
+
+### 1. Set GitHub Environment Variables
+Create a `.env` file (or export variables in terminal) to configure GitHub API settings:
 ```bash
-git clone <your-repo-url>
-cd ci-cd-job-tracker
+GITHUB_OWNER="your-github-username"
+GITHUB_REPO="your-repo-name"
+GITHUB_TOKEN="your-personal-access-token"
 ```
 
-### Step 2: Build and start containers
-
+### 2. Build & Launch Containers
+Spin up the application and DB services in detached mode:
 ```bash
-docker compose up --build
+docker compose up --build -d
 ```
 
-What happens here:
-
-- Builds Flask image from `Dockerfile`
-- Pulls PostgreSQL image (`postgres:15`) if missing
-- Starts both containers
-- App becomes available at `http://localhost:5000`
-
-### Step 3: Verify platform is running
-
+### 3. Verify Endpoints
 ```bash
-curl http://localhost:5000/
+# 1. Health Status
 curl http://localhost:5000/health
+# Expected: {"status": "UP"}
+
+# 2. Config Endpoint 
+curl http://localhost:5000/github-config
+# Expected: {"api_url": "...", "owner": "...", "repository": "..."}
 ```
 
-Expected:
-
-- `/` returns platform running message
-- `/health` returns `{"status":"UP"}`
-
-## 7. API Revision Sheet 
-
-Base URL:
-
-```text
-http://localhost:5000
-```
-
-### 1) Add a job
-
+### 4. Tear Down
 ```bash
-curl -X POST http://localhost:5000/jobs/add \
-	-H "Content-Type: application/json" \
-	-d '{
-		"job_name": "build-main",
-		"status": "SUCCESS",
-		"duration": 125,
-		"triggered_by": "github-actions"
-	}'
-```
-
-### 2) List all jobs
-
-```bash
-curl http://localhost:5000/jobs
-```
-
-### 3) Get stats
-
-```bash
-curl http://localhost:5000/jobs/stats
-```
-
-Returned stats include:
-
-- `total_jobs`
-- `successful_jobs`
-- `failed_jobs`
-- `success_rate`
-
-## 8. Useful Docker Commands (Interview Ready)
-
-### Run in detached mode
-
-```bash
-docker compose up -d --build
-```
-
-### Check running containers
-
-```bash
-docker compose ps
-```
-
-### View logs
-
-```bash
-docker compose logs -f
-```
-
-### Restart services
-
-```bash
-docker compose restart
-```
-
-### Rebuild only app image
-
-```bash
-docker compose build app
-docker compose up -d
-```
-
-## 9. Stop the Platform (Start-to-Stop Complete)
-
-### Stop containers only (keep data)
-
-```bash
+# Stop and remove containers (keeps database data)
 docker compose down
-```
 
-### Stop and remove volumes (delete DB data)
-
-```bash
+# Stop and wipe volume/data (resets database)
 docker compose down -v
 ```
 
-### Optional full cleanup (also remove images)
+---
 
-```bash
-docker compose down -v --rmi all
-```
+## 🎙️ Interview Cheat Sheet: Containerization
 
-## 10. Common Troubleshooting
+When showcasing this during interviews, be ready to explain these five concepts:
 
-### Port 5000 or 5432 already in use
+### 1. Multi-Container Orchestration (Docker Compose)
+*   **Question**: Why use Docker Compose instead of launching containers with `docker run`?
+*   **Answer**: Docker Compose allows us to define multi-container environments in a single declarative YAML file (`docker-compose.yml`). Instead of starting, networking, and linking Python and PostgreSQL containers individually, developers can manage the entire application stack lifecycle with one command: `docker compose up`.
 
-- Stop conflicting local services/containers
-- Or change host ports in `docker-compose.yml`
+### 2. Service Discovery & Communication
+*   **Question**: How does Flask connect to PostgreSQL inside the container network?
+*   **Answer**: Docker Compose creates a default shared network for services. Services can reach each other using their service name as the hostname. In [docker-compose.yml](file:///c:/SRI/Srinithi_projects/Git/ci-cd-job-tracker/docker-compose.yml), the DB service is named `db`, so Flask uses the database connection string: `postgresql://postgres:postgres@db:5432/cicd_db`.
 
-### App fails to connect to DB at startup
+### 3. Data Persistence
+*   **Question**: What happens to PostgreSQL data when you destroy the DB container?
+*   **Answer**: By default, containers are ephemeral—if they stop/destroy, all internal data is lost. To persist tables and workflows, we use a Docker **Volume** (`postgres_data`) mapped to `/var/lib/postgresql/data` (Postgres' default storage directory). This mounts the storage directory on the host machine, keeping our data safe across rebuilds.
 
-- Check DB container status: `docker compose ps`
-- Check logs: `docker compose logs -f app db`
-- Retry after restart: `docker compose restart`
+### 4. Container Startup Dependencies / Crash Loop Backoff
+*   **Question**: How did you handle the issue of Flask starting before PostgreSQL is ready?
+*   **Answer**: Database engines take a few seconds to initialize and start accepting connections. In [app.py](file:///c:/SRI/Srinithi_projects/Git/ci-cd-job-tracker/app.py), we introduced a simple `time.sleep(10)` delay before running database migrations (`db.create_all()`). Under production workloads, a **healthcheck dependency** configuration in Docker Compose or a retry-connection loop script (like `wait-for-it.sh`) is preferred.
 
-### Reset everything to clean state
+### 5. Automated CI/CD (GitHub Actions)
+*   **Question**: How is Docker tested automatically?
+*   **Answer**: We have a CI pipeline in [.github/workflows/docker-ci.yml](file:///c:/SRI/Srinithi_projects/Git/ci-cd-job-tracker/.github/workflows/docker-ci.yml). Upon pushing to the `main` branch, the pipeline will check out the codebase, build and start containers via `docker compose up --build -d`, verify the app's health and configuration endpoint are active, and showcase application log status.
 
-```bash
-docker compose down -v
-docker compose up --build
-```
+---
 
-## 11. Interview Talking Points
+## 🛠️ Essential Commands for Interviews
 
-Use these points to explain the project quickly:
-
-1. Why containers: consistent environment and easy onboarding.
-2. Why Compose: orchestration of app + database with one command.
-3. Data persistence: Docker volume keeps PostgreSQL data.
-4. Service communication: app connects to DB using service name `db`.
-5. Health and observability: `/health`, container logs, and stats API.
-6. Trade-offs: no auth layer yet, simple schema, basic startup wait.
-
-## 12. One-Minute Runbook (Memorize)
-
-```bash
-docker compose up --build
-curl http://localhost:5000/health
-curl -X POST http://localhost:5000/jobs/add -H "Content-Type: application/json" -d '{"job_name":"test","status":"SUCCESS","duration":30,"triggered_by":"manual"}'
-curl http://localhost:5000/jobs
-curl http://localhost:5000/jobs/stats
-docker compose down
-```
-
-This is the complete lifecycle from startup to shutdown.
+| Command | Action | Key Use Case |
+|---|---|---|
+| `docker compose ps` | Show container state. | Verify if containers are running, restarting, or exited. |
+| `docker compose logs -f` | Stream container logs stdout/stderr. | Debugging database connection failures. |
+| `docker compose exec app printenv` | Run commands in a running container. | Inspecting current running environment variables. |
+| `docker compose up --force-recreate` | Force recreation of all containers. | Refresh code changes without rebuilding dependencies. |
