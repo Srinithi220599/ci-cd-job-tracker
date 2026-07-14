@@ -43,6 +43,6 @@ jobs:
         if: always()
         run: docker logs cicd-app
 
-      - name: Stop Containers
-        if: always()
-        run: docker compose down
+      #- name: Stop Containers
+        #if: always()
+        #run: docker compose down
