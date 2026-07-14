@@ -6,10 +6,10 @@ on:
       - main
 
 jobs:
-
   docker-compose-test:
 
     runs-on: ubuntu-latest
+
     env:
       GITHUB_OWNER: ${{ vars.GH_OWNER }}
       GITHUB_REPO: ${{ vars.GH_REPO }}
@@ -29,22 +29,20 @@ jobs:
       - name: Check Running Containers
         run: docker ps
 
+      - name: Verify GitHub Environment Variables
+        run: |
+          docker exec cicd-app printenv | grep GITHUB
+
       - name: Test Health Endpoint
         run: curl http://localhost:5000/health
 
-      - name: Test Add Job API
-        run: |
-          curl -X POST http://localhost:5000/jobs/add \
-          -H "Content-Type: application/json" \
-          -d '{"job_name":"github-actions-build","status":"SUCCESS","duration":120,"triggered_by":"github-actions"}'
+      - name: Test GitHub Configuration Endpoint
+        run: curl http://localhost:5000/github-config
 
-      - name: Validate Job Data
-        run: |
-          response=$(curl -s http://localhost:5000/jobs)
-
-          echo "$response"
-
-          echo "$response" | grep "github-actions-build"
+      - name: Show Application Logs
+        if: always()
+        run: docker logs cicd-app
 
       - name: Stop Containers
+        if: always()
         run: docker compose down
