@@ -8,7 +8,9 @@ on:
 jobs:
   docker-compose-test:
 
-    runs-on: docker-runner
+    runs-on:
+      - self-hosted
+      - docker-runner
 
     env:
       GITHUB_OWNER: ${{ vars.GH_OWNER }}
@@ -24,26 +26,36 @@ jobs:
         run: docker compose up --build -d
 
       - name: Wait for Application Startup
-        run: sleep 20
+        shell: powershell
+        run: Start-Sleep -Seconds 20
 
       - name: Check Running Containers
-        run: docker ps
+        run: docker ps -a
 
-      - name: Verify GitHub Environment Variables
+      - name: Show Environment Variables Inside Container
+        run: docker exec cicd-app printenv
+
+      - name: Verify Health Endpoint
         shell: powershell
         run: |
-          docker exec cicd-app printenv | Select-String GITHUB
+          $response = Invoke-RestMethod -Uri "http://localhost:5000/health"
+          $response | ConvertTo-Json
 
-      - name: Test Health Endpoint
-        run: curl http://localhost:5000/health
-
-      - name: Test GitHub Configuration Endpoint
-        run: curl http://localhost:5000/github-config
+      - name: Verify GitHub Configuration
+        shell: powershell
+        run: |
+          $response = Invoke-RestMethod -Uri "http://localhost:5000/github-config"
+          $response | ConvertTo-Json
 
       - name: Show Application Logs
         if: always()
         run: docker logs cicd-app
 
-      #- name: Stop Containers
-        #if: always()
-        #run: docker compose down
+      - name: Show Database Logs
+        if: always()
+        run: docker logs postgres-db
+
+      # Uncomment after debugging
+      # - name: Stop Containers
+      #   if: always()
+      #   run: docker compose down
