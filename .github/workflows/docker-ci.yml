@@ -8,7 +8,7 @@ on:
 jobs:
   docker-compose-test:
 
-    runs-on: ubuntu-latest
+    runs-on: docker-runner
 
     env:
       GITHUB_OWNER: ${{ vars.GH_OWNER }}
