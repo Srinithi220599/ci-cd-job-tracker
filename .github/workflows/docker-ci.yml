@@ -1,4 +1,5 @@
 name: Docker Compose CI Pipeline
+
 on:
   push:
     branches:
