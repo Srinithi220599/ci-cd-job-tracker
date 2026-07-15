@@ -1,102 +1,235 @@
-# CI/CD Job Tracker (Containerized)
+# GitHub Workflow Analytics Platform
 
-An interview-ready showcase of a containerized **Flask + PostgreSQL** application, designed to track GitHub Action workflows. This repository demonstrates core DevOps concepts: **multi-container orchestration, data persistence, network isolation, and automated CI pipelines**.
+## Project Overview
 
----
+This project is a containerized CI/CD monitoring application that collects GitHub Actions workflow execution details, stores them in PostgreSQL, and displays them through a Flask web application.
 
-## 🏗️ Architecture
-
-```mermaid
-graph TD
-    Client["Client / Browser (localhost:5000)"]
-    
-    subgraph "Docker Compose Setup"
-        AppContainer["Flask API Container (cicd-app)"]
-        DbContainer["PostgreSQL Container (postgres-db:5432)"]
-        Volume[("Docker Volume (postgres_data)")]
-    end
-    
-    Client -->|Port 5000:5000| AppContainer
-    AppContainer -->|Internal TCP Network| DbContainer
-    DbContainer ==>|Persists Data| Volume
-```
-
-### 1. Services
-*   **API Service (`cicd-app`)**: A Python 3.11 Flask API running on port `5000`. It connects to PostgreSQL using SQLAlchemy to manage Workflow runs and exposes status/config endpoints.
-*   **Database Service (`postgres-db`)**: A Postgres 15 database instance listening internally on port `5432`.
-*   **Volume (`postgres_data`)**: Map directory `/var/lib/postgresql/data` from the DB container to hold tables and data robustly across restarts.
+The project is completely Dockerized and uses GitHub Actions to automatically build and test the application.
 
 ---
 
-## 🚀 Quick Start (1-Minute Setup)
+## Technologies Used
 
-### 1. Set GitHub Environment Variables
-Create a `.env` file (or export variables in terminal) to configure GitHub API settings:
-```bash
-GITHUB_OWNER="your-github-username"
-GITHUB_REPO="your-repo-name"
-GITHUB_TOKEN="your-personal-access-token"
+- Python
+- Flask
+- SQLAlchemy
+- PostgreSQL
+- Docker
+- Docker Compose
+- GitHub Actions
+- GitHub REST API
+
+---
+
+## Project Architecture
+
 ```
-
-### 2. Build & Launch Containers
-Spin up the application and DB services in detached mode:
-```bash
-docker compose up --build -d
-```
-
-### 3. Verify Endpoints
-```bash
-# 1. Health Status
-curl http://localhost:5000/health
-# Expected: {"status": "UP"}
-
-# 2. Config Endpoint 
-curl http://localhost:5000/github-config
-# Expected: {"api_url": "...", "owner": "...", "repository": "..."}
-```
-
-### 4. Tear Down
-```bash
-# Stop and remove containers (keeps database data)
-docker compose down
-
-# Stop and wipe volume/data (resets database)
-docker compose down -v
+                GitHub Actions
+                      │
+                      ▼
+             GitHub REST API
+                      │
+             POST /sync Endpoint
+                      │
+                      ▼
+                Flask Application
+                      │
+                      ▼
+                 PostgreSQL
+                      │
+                      ▼
+            GET /workflows Dashboard
 ```
 
 ---
 
-## 🎙️ Interview Cheat Sheet: Containerization
+## Features
 
-When showcasing this during interviews, be ready to explain these five concepts:
-
-### 1. Multi-Container Orchestration (Docker Compose)
-*   **Question**: Why use Docker Compose instead of launching containers with `docker run`?
-*   **Answer**: Docker Compose allows us to define multi-container environments in a single declarative YAML file (`docker-compose.yml`). Instead of starting, networking, and linking Python and PostgreSQL containers individually, developers can manage the entire application stack lifecycle with one command: `docker compose up`.
-
-### 2. Service Discovery & Communication
-*   **Question**: How does Flask connect to PostgreSQL inside the container network?
-*   **Answer**: Docker Compose creates a default shared network for services. Services can reach each other using their service name as the hostname. In [docker-compose.yml](file:///c:/SRI/Srinithi_projects/Git/ci-cd-job-tracker/docker-compose.yml), the DB service is named `db`, so Flask uses the database connection string: `postgresql://postgres:postgres@db:5432/cicd_db`.
-
-### 3. Data Persistence
-*   **Question**: What happens to PostgreSQL data when you destroy the DB container?
-*   **Answer**: By default, containers are ephemeral—if they stop/destroy, all internal data is lost. To persist tables and workflows, we use a Docker **Volume** (`postgres_data`) mapped to `/var/lib/postgresql/data` (Postgres' default storage directory). This mounts the storage directory on the host machine, keeping our data safe across rebuilds.
-
-### 4. Container Startup Dependencies / Crash Loop Backoff
-*   **Question**: How did you handle the issue of Flask starting before PostgreSQL is ready?
-*   **Answer**: Database engines take a few seconds to initialize and start accepting connections. In [app.py](file:///c:/SRI/Srinithi_projects/Git/ci-cd-job-tracker/app.py), we introduced a simple `time.sleep(10)` delay before running database migrations (`db.create_all()`). Under production workloads, a **healthcheck dependency** configuration in Docker Compose or a retry-connection loop script (like `wait-for-it.sh`) is preferred.
-
-### 5. Automated CI/CD (GitHub Actions)
-*   **Question**: How is Docker tested automatically?
-*   **Answer**: We have a CI pipeline in [.github/workflows/docker-ci.yml](file:///c:/SRI/Srinithi_projects/Git/ci-cd-job-tracker/.github/workflows/docker-ci.yml). Upon pushing to the `main` branch, the pipeline will check out the codebase, build and start containers via `docker compose up --build -d`, verify the app's health and configuration endpoint are active, and showcase application log status.
+- Fetches workflow runs from GitHub Actions
+- Stores workflow history in PostgreSQL
+- Avoids duplicate records using GitHub Run ID
+- Displays workflow details in a dashboard
+- Calculates workflow execution duration
+- Runs inside Docker containers
+- Automated CI using GitHub Actions
 
 ---
 
-## 🛠️ Essential Commands for Interviews
+## Project Structure
 
-| Command | Action | Key Use Case |
-|---|---|---|
-| `docker compose ps` | Show container state. | Verify if containers are running, restarting, or exited. |
-| `docker compose logs -f` | Stream container logs stdout/stderr. | Debugging database connection failures. |
-| `docker compose exec app printenv` | Run commands in a running container. | Inspecting current running environment variables. |
-| `docker compose up --force-recreate` | Force recreation of all containers. | Refresh code changes without rebuilding dependencies. |
+```
+ci-cd-job-tracker
+│
+├── app.py
+├── github_service.py
+├── models.py
+├── requirements.txt
+├── Dockerfile
+├── docker-compose.yml
+├── .github
+│   └── workflows
+│       └── docker-ci.yml
+└── README.md
+```
+
+---
+
+## Docker Containers
+
+### Flask Container
+
+- Runs the Flask application
+- Calls GitHub REST API
+- Stores workflow data
+
+### PostgreSQL Container
+
+- Stores workflow execution history
+
+---
+
+## Environment Variables
+
+```
+DATABASE_URL
+GITHUB_OWNER
+GITHUB_REPO
+GITHUB_TOKEN
+```
+
+---
+
+## REST APIs
+
+### Home
+
+```
+GET /
+```
+
+Returns application status.
+
+---
+
+### Health Check
+
+```
+GET /health
+```
+
+Checks whether the application is running.
+
+---
+
+### GitHub Configuration
+
+```
+GET /github-config
+```
+
+Displays configured GitHub repository information.
+
+---
+
+### Synchronize Workflow Runs
+
+```
+POST /sync
+```
+
+Fetches workflow runs from GitHub and stores them in PostgreSQL.
+
+Example Response
+
+```json
+{
+    "new_runs_added": 20,
+    "duplicates_skipped": 5
+}
+```
+
+---
+
+### Workflow Dashboard
+
+```
+GET /workflows
+```
+
+Displays all workflow runs stored in PostgreSQL.
+
+---
+
+## How It Works
+
+1. GitHub Actions workflow starts.
+2. Docker Compose creates Flask and PostgreSQL containers.
+3. Flask connects to GitHub REST API.
+4. Workflow execution details are retrieved.
+5. Data is stored in PostgreSQL.
+6. Workflow dashboard displays execution history.
+
+---
+
+## Running Locally
+
+Build and start containers
+
+```bash
+docker compose up --build
+```
+
+Open
+
+```
+http://localhost:5000/workflows
+```
+
+Synchronize latest workflow runs
+
+```
+POST http://localhost:5000/sync
+```
+
+---
+
+## GitHub Actions Pipeline
+
+The CI pipeline performs the following:
+
+- Checkout Repository
+- Build Docker Image
+- Start Containers
+- Verify Health Endpoint
+- Verify GitHub Configuration
+- Synchronize Workflow Runs
+- Verify Application
+- Display Container Logs
+
+---
+
+## Key Learning Outcomes
+
+- Docker Image creation
+- Docker Compose
+- Multi-container applications
+- PostgreSQL integration
+- Flask REST APIs
+- GitHub REST API
+- GitHub Actions CI
+- Self-hosted GitHub Runner
+- Environment Variables
+- Persistent Docker Volumes
+
+---
+
+## Future Enhancements
+
+- Workflow statistics dashboard
+- Success rate visualization
+- Average workflow duration
+- Search by workflow name
+- Filter by branch
+- Filter by status
+- Grafana dashboard integration
+- Deploy on AWS EC2
