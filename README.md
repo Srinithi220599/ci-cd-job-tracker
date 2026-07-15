@@ -6,7 +6,7 @@ I built a Dockerized GitHub Workflow Analytics Platform using **Flask**, **Postg
 
 The application integrates with the **GitHub REST API** to fetch GitHub Actions workflow execution details. The `/sync` endpoint synchronizes workflow runs into PostgreSQL while preventing duplicate entries using the GitHub **Run ID** as the unique identifier. Workflow execution duration is calculated using the workflow start and end timestamps and stored in the database.
 
-The `/workflows` endpoint retrieves workflow history from PostgreSQL and displays it as an HTML dashboard with color-coded workflow statuses. The application is fully containerized using Docker Compose and its CI pipeline is automated using GitHub Actions running on a self-hosted runner.
+The `/workflows` endpoint retrieves workflow history from PostgreSQL and displays it as an HTML dashboard with color-coded workflow statuses. The application is fully containerized using Docker Compose and its CI pipeline is automated using GitHub Actions.
 
 ---
 
