@@ -73,12 +73,124 @@ ci-cd-job-tracker
 ├── docker-compose.yml
 ├── requirements.txt
 ├── .github/
-│    └── workflows/
-│          └── docker-ci.yml
+│   └── workflows/
+│       └── docker-ci.yml
 └── README.md
 ```
 
+## File Responsibilities
+
+### app.py
+
+Main Flask application.
+
+**Responsibilities**
+
+- Creates the Flask application
+- Configures SQLAlchemy
+- Defines all REST API endpoints
+- Calls GitHub service
+- Stores workflow data into PostgreSQL
+- Displays Workflow Dashboard
+
 ---
+
+### models.py
+
+Database models using SQLAlchemy ORM.
+
+**Responsibilities**
+
+- Defines WorkflowRun table
+- Maps Python objects to PostgreSQL tables
+- Defines all database columns and datatypes
+
+---
+
+### github_service.py
+
+GitHub REST API integration layer.
+
+**Responsibilities**
+
+- Connects to GitHub REST API
+- Authenticates using Personal Access Token
+- Downloads GitHub Actions workflow runs
+- Returns workflow data to Flask
+
+---
+
+### Dockerfile
+
+Creates the Docker image for the Flask application.
+
+**Responsibilities**
+
+- Uses Python base image
+- Installs dependencies
+- Copies project files
+- Starts Flask application
+
+---
+
+### docker-compose.yml
+
+Defines the multi-container application.
+
+**Responsibilities**
+
+- Starts Flask container
+- Starts PostgreSQL container
+- Creates Docker network
+- Creates persistent Docker volume
+- Passes environment variables
+- Maps container ports
+
+---
+
+### requirements.txt
+
+Lists all Python project dependencies.
+
+**Includes**
+
+- Flask
+- SQLAlchemy
+- Flask-SQLAlchemy
+- Requests
+- Gunicorn
+- psycopg2-binary
+
+---
+
+### docker-ci.yml
+
+GitHub Actions CI pipeline.
+
+**Responsibilities**
+
+- Checks out repository
+- Builds Docker image
+- Starts Docker Compose
+- Performs health checks
+- Verifies GitHub configuration
+- Synchronizes workflow runs
+- Displays application logs
+
+---
+
+### README.md
+
+Project documentation.
+
+**Contains**
+
+- Project overview
+- Architecture
+- API documentation
+- Setup instructions
+- Interview explanation
+- Technologies used
 
 # Environment Variables
 
