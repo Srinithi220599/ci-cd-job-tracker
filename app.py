@@ -49,6 +49,18 @@ def sync():
             duplicates += 1
             continue
 
+        created_at = datetime.fromisoformat(
+            run["created_at"].replace("Z", "+00:00")
+        )
+
+        updated_at = datetime.fromisoformat(
+            run["updated_at"].replace("Z", "+00:00")
+        )
+
+        duration = int(
+            (updated_at - created_at).total_seconds()
+        )
+
         workflow = WorkflowRun(
             run_id=run["id"],
             workflow_name=run["name"],
@@ -60,13 +72,9 @@ def sync():
             conclusion=run["conclusion"],
             actor=run["actor"]["login"],
             html_url=run["html_url"],
-            created_at=datetime.fromisoformat(
-                run["created_at"].replace("Z", "+00:00")
-            ),
-            updated_at=datetime.fromisoformat(
-                run["updated_at"].replace("Z", "+00:00")
-            ),
-            duration_seconds=0
+            created_at=created_at,
+            updated_at=updated_at,
+            duration_seconds=duration
         )
 
         db.session.add(workflow)
@@ -76,10 +84,11 @@ def sync():
     db.session.commit()
 
     return jsonify({
+        "message": "Workflow synchronization completed successfully.",
         "new_runs_added": new_runs,
         "duplicates_skipped": duplicates
     })
-@app.route("/workflows")
+@app.route("/workflows", methods=["GET"])
 def get_workflows():
 
     workflows = WorkflowRun.query.order_by(
@@ -89,65 +98,130 @@ def get_workflows():
     html = """
     <html>
     <head>
-        <title>GitHub Workflow Runs</title>
+        <title>GitHub Workflow Dashboard</title>
+
         <style>
-            body{
-                font-family:Arial;
-                margin:20px;
-            }
 
-            table{
-                border-collapse:collapse;
-                width:100%;
-            }
+        body{
+            font-family:Arial;
+            margin:20px;
+            background:#f5f7fa;
+        }
 
-            th,td{
-                border:1px solid #ddd;
-                padding:10px;
-                text-align:left;
-            }
+        h2{
+            color:#2d6cdf;
+        }
 
-            th{
-                background:#2d6cdf;
-                color:white;
-            }
+        table{
+            width:100%;
+            border-collapse:collapse;
+        }
 
-            tr:nth-child(even){
-                background:#f5f5f5;
-            }
+        th{
+            background:#2d6cdf;
+            color:white;
+            padding:12px;
+            text-align:left;
+        }
+
+        td{
+            padding:10px;
+            border:1px solid #ddd;
+        }
+
+        tr:nth-child(even){
+            background:#f2f2f2;
+        }
+
+        tr:hover{
+            background:#e8f0ff;
+        }
+
+        .success{
+            background:#d4edda;
+            color:#155724;
+            font-weight:bold;
+            text-align:center;
+        }
+
+        .failure{
+            background:#f8d7da;
+            color:#721c24;
+            font-weight:bold;
+            text-align:center;
+        }
+
+        .cancelled{
+            background:#fff3cd;
+            color:#856404;
+            font-weight:bold;
+            text-align:center;
+        }
+
+        .running{
+            background:#d1ecf1;
+            color:#0c5460;
+            font-weight:bold;
+            text-align:center;
+        }
+
+        a{
+            text-decoration:none;
+            color:#2d6cdf;
+            font-weight:bold;
+        }
+
         </style>
+
     </head>
 
     <body>
 
-    <h2>GitHub Workflow Runs</h2>
+    <h2>GitHub Workflow Dashboard</h2>
 
     <table>
 
     <tr>
         <th>Run ID</th>
         <th>Workflow</th>
+        <th>Run No</th>
         <th>Branch</th>
+        <th>Event</th>
         <th>Status</th>
         <th>Conclusion</th>
-        <th>Actor</th>
-        <th>Run Number</th>
-        <th>Duration(s)</th>
+        <th>Triggered By</th>
+        <th>Duration (sec)</th>
+        <th>Created At</th>
+        <th>GitHub</th>
     </tr>
     """
 
     for workflow in workflows:
 
+        conclusion = workflow.conclusion if workflow.conclusion else "running"
+
+        if conclusion.lower() == "success":
+            css_class = "success"
+        elif conclusion.lower() == "failure":
+            css_class = "failure"
+        elif conclusion.lower() == "cancelled":
+            css_class = "cancelled"
+        else:
+            css_class = "running"
+
         html += f"""
         <tr>
             <td>{workflow.run_id}</td>
             <td>{workflow.workflow_name}</td>
-            <td>{workflow.branch}</td>
-            <td>{workflow.status}</td>
-            <td>{workflow.conclusion}</td>
-            <td>{workflow.actor}</td>
             <td>{workflow.run_number}</td>
+            <td>{workflow.branch}</td>
+            <td>{workflow.event}</td>
+            <td>{workflow.status}</td>
+            <td class="{css_class}">{conclusion.upper()}</td>
+            <td>{workflow.actor}</td>
             <td>{workflow.duration_seconds}</td>
+            <td>{workflow.created_at.strftime("%d-%m-%Y %H:%M:%S") if workflow.created_at else ""}</td>
+            <td><a href="{workflow.html_url}" target="_blank">View Run</a></td>
         </tr>
         """
 
