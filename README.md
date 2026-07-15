@@ -13,6 +13,7 @@ The `/workflows` endpoint retrieves workflow history from PostgreSQL and display
 # Project Overview
 
 This project is a containerized CI/CD monitoring application that fetches GitHub Actions workflow execution details, stores them in PostgreSQL, and displays them through a Flask dashboard.
+![Uploading image.png…]()
 
 ---
 
