@@ -79,34 +79,96 @@ def sync():
         "new_runs_added": new_runs,
         "duplicates_skipped": duplicates
     })
-
-@app.route("/workflows", methods=["GET"])
+@app.route("/workflows")
 def get_workflows():
 
     workflows = WorkflowRun.query.order_by(
         WorkflowRun.run_number.desc()
     ).all()
 
-    output = []
+    html = """
+    <html>
+    <head>
+        <title>GitHub Workflow Runs</title>
+        <style>
+            body{
+                font-family:Arial;
+                margin:20px;
+            }
+
+            table{
+                border-collapse:collapse;
+                width:100%;
+            }
+
+            th,td{
+                border:1px solid #ddd;
+                padding:10px;
+                text-align:left;
+            }
+
+            th{
+                background:#2d6cdf;
+                color:white;
+            }
+
+            tr:nth-child(even){
+                background:#f5f5f5;
+            }
+        </style>
+    </head>
+
+    <body>
+
+    <h2>GitHub Workflow Runs</h2>
+
+    <table>
+
+    <tr>
+        <th>Run ID</th>
+        <th>Workflow</th>
+        <th>Branch</th>
+        <th>Status</th>
+        <th>Conclusion</th>
+        <th>Actor</th>
+        <th>Run Number</th>
+        <th>Duration(s)</th>
+    </tr>
+    """
 
     for workflow in workflows:
 
-        output.append({
-            "run_id": workflow.run_id,
-            "workflow_name": workflow.workflow_name,
-            "run_number": workflow.run_number,
-            "branch": workflow.branch,
-            "event": workflow.event,
-            "status": workflow.status,
-            "conclusion": workflow.conclusion,
-            "actor": workflow.actor,
-            "duration_seconds": workflow.duration_seconds,
-            "html_url": workflow.html_url,
-            "created_at": workflow.created_at,
-            "updated_at": workflow.updated_at
-        })
+        html += f"""
+        <tr>
+            <td>{workflow.run_id}</td>
+            <td>{workflow.workflow_name}</td>
+            <td>{workflow.branch}</td>
+            <td>{workflow.status}</td>
+            <td>{workflow.conclusion}</td>
+            <td>{workflow.actor}</td>
+            <td>{workflow.run_number}</td>
+            <td>{workflow.duration_seconds}</td>
+        </tr>
+        """
 
-    return jsonify(output)
+    html += """
+    </table>
+
+    </body>
+    </html>
+    """
+
+    return html
+
+@app.route("/debug")
+def debug():
+
+    workflows = WorkflowRun.query.all()
+
+    return {
+        "count": len(workflows)
+    }
+
 @app.route("/health")
 def health():
     return jsonify({
