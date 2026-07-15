@@ -1,5 +1,6 @@
 from flask import Flask, jsonify
 from models import db
+from github_service import fetch_workflow_runs
 import os
 import time
 
@@ -26,7 +27,13 @@ GITHUB_API_URL = (
     f"{GITHUB_OWNER}/{GITHUB_REPO}/actions/runs"
 )
 
+@app.route("/sync", methods=["POST"])
+def sync():
 
+    data = fetch_workflow_runs()
+
+    return jsonify(data)
+    
 @app.route("/")
 def home():
     return jsonify({
