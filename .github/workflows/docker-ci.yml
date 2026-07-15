@@ -32,9 +32,6 @@ jobs:
       - name: Check Running Containers
         run: docker ps -a
 
-      - name: Show Environment Variables Inside Container
-        run: docker exec cicd-app printenv
-
       - name: Verify Health Endpoint
         shell: powershell
         run: |
@@ -47,6 +44,19 @@ jobs:
           $response = Invoke-RestMethod -Uri "http://localhost:5000/github-config"
           $response | ConvertTo-Json
 
+      - name: Sync GitHub Workflow Runs
+        shell: powershell
+        run: |
+          $response = Invoke-RestMethod -Method POST -Uri "http://localhost:5000/sync"
+          Write-Host "Sync Result:"
+          $response | ConvertTo-Json
+
+      - name: Verify Workflow Records
+        shell: powershell
+        run: |
+          $response = Invoke-RestMethod -Uri "http://localhost:5000/workflows"
+          Write-Host "Workflow Dashboard returned successfully."
+
       - name: Show Application Logs
         if: always()
         run: docker logs cicd-app
@@ -55,7 +65,8 @@ jobs:
         if: always()
         run: docker logs postgres-db
 
-      # Uncomment after debugging
+      # Uncomment later if you want the containers to stop after every workflow.
+      #
       # - name: Stop Containers
       #   if: always()
       #   run: docker compose down
