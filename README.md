@@ -1,14 +1,22 @@
 # GitHub Workflow Analytics Platform
 
-## Project Overview
+## Overview
 
-This project is a containerized CI/CD monitoring application that collects GitHub Actions workflow execution details, stores them in PostgreSQL, and displays them through a Flask web application.
+I built a Dockerized GitHub Workflow Analytics Platform using **Flask**, **PostgreSQL**, **Docker Compose**, and **GitHub Actions**.
 
-The project is completely Dockerized and uses GitHub Actions to automatically build and test the application.
+The application integrates with the **GitHub REST API** to fetch GitHub Actions workflow execution details. The `/sync` endpoint synchronizes workflow runs into PostgreSQL while preventing duplicate entries using the GitHub **Run ID** as the unique identifier. Workflow execution duration is calculated using the workflow start and end timestamps and stored in the database.
+
+The `/workflows` endpoint retrieves workflow history from PostgreSQL and displays it as an HTML dashboard with color-coded workflow statuses. The application is fully containerized using Docker Compose and its CI pipeline is automated using GitHub Actions running on a self-hosted runner.
 
 ---
 
-## Technologies Used
+# Project Overview
+
+This project is a containerized CI/CD monitoring application that fetches GitHub Actions workflow execution details, stores them in PostgreSQL, and displays them through a Flask dashboard.
+
+---
+
+# Technologies Used
 
 - Python
 - Flask
@@ -18,77 +26,59 @@ The project is completely Dockerized and uses GitHub Actions to automatically bu
 - Docker Compose
 - GitHub Actions
 - GitHub REST API
+- Self Hosted GitHub Runner
 
 ---
 
-## Project Architecture
+# Project Architecture
 
 ```
+                    Git Push
+                        │
+                        ▼
                 GitHub Actions
-                      │
-                      ▼
-             GitHub REST API
-                      │
-             POST /sync Endpoint
-                      │
-                      ▼
-                Flask Application
-                      │
-                      ▼
-                 PostgreSQL
-                      │
-                      ▼
-            GET /workflows Dashboard
+                        │
+                        ▼
+             Docker Compose (CI)
+                        │
+                        ▼
+          Flask Container + PostgreSQL
+                        │
+                        ▼
+               POST /sync Endpoint
+                        │
+                        ▼
+             GitHub Actions REST API
+                        │
+                        ▼
+          Store Workflow Runs in PostgreSQL
+                        │
+                        ▼
+              GET /workflows Dashboard
 ```
 
 ---
 
-## Features
-
-- Fetches workflow runs from GitHub Actions
-- Stores workflow history in PostgreSQL
-- Avoids duplicate records using GitHub Run ID
-- Displays workflow details in a dashboard
-- Calculates workflow execution duration
-- Runs inside Docker containers
-- Automated CI using GitHub Actions
-
----
-
-## Project Structure
+# Project Structure
 
 ```
 ci-cd-job-tracker
 │
 ├── app.py
-├── github_service.py
 ├── models.py
-├── requirements.txt
+├── github_service.py
 ├── Dockerfile
 ├── docker-compose.yml
-├── .github
-│   └── workflows
-│       └── docker-ci.yml
+├── requirements.txt
+├── .github/
+│    └── workflows/
+│          └── docker-ci.yml
 └── README.md
 ```
 
 ---
 
-## Docker Containers
-
-### Flask Container
-
-- Runs the Flask application
-- Calls GitHub REST API
-- Stores workflow data
-
-### PostgreSQL Container
-
-- Stores workflow execution history
-
----
-
-## Environment Variables
+# Environment Variables
 
 ```
 DATABASE_URL
@@ -99,93 +89,254 @@ GITHUB_TOKEN
 
 ---
 
-## REST APIs
+# Docker Containers
 
-### Home
+## Flask Container
+
+Responsible for
+
+- Running Flask application
+- Calling GitHub REST API
+- Storing workflow data
+- Displaying Workflow Dashboard
+
+---
+
+## PostgreSQL Container
+
+Responsible for
+
+- Storing workflow execution history
+- Persisting workflow data
+- Avoiding data loss using Docker Volumes
+
+---
+
+# REST API Endpoints
+
+---
+
+## 1. Home Endpoint
 
 ```
 GET /
 ```
 
-Returns application status.
+### Purpose
 
----
+Checks whether the Flask application is running.
 
-### Health Check
-
-```
-GET /health
-```
-
-Checks whether the application is running.
-
----
-
-### GitHub Configuration
+### Flow
 
 ```
-GET /github-config
+Browser
+   │
+GET /
+   │
+Flask
+   │
+Application Status
 ```
 
-Displays configured GitHub repository information.
-
----
-
-### Synchronize Workflow Runs
-
-```
-POST /sync
-```
-
-Fetches workflow runs from GitHub and stores them in PostgreSQL.
-
-Example Response
+### Response
 
 ```json
 {
-    "new_runs_added": 20,
-    "duplicates_skipped": 5
+    "application":"GitHub Workflow Analytics Platform",
+    "status":"Running"
 }
 ```
 
 ---
 
-### Workflow Dashboard
+## 2. Health Endpoint
+
+```
+GET /health
+```
+
+### Purpose
+
+Checks application health.
+
+### Why?
+
+Used by GitHub Actions before executing API tests.
+
+### Flow
+
+```
+GitHub Actions
+      │
+GET /health
+      │
+Flask
+      │
+Returns UP
+```
+
+### Response
+
+```json
+{
+    "status":"UP"
+}
+```
+
+---
+
+## 3. GitHub Configuration
+
+```
+GET /github-config
+```
+
+### Purpose
+
+Verifies that Docker Compose correctly passed GitHub environment variables to the Flask application.
+
+### Flow
+
+```
+Docker Compose
+      │
+Environment Variables
+      │
+Flask
+      │
+GET /github-config
+      │
+Browser
+```
+
+### Returns
+
+- GitHub Owner
+- Repository Name
+- GitHub API URL
+
+---
+
+## 4. Synchronize Workflow Runs ⭐
+
+```
+POST /sync
+```
+
+### Purpose
+
+Synchronizes GitHub Actions workflow runs into PostgreSQL.
+
+### Complete Flow
+
+```
+POST /sync
+      │
+      ▼
+GitHub REST API
+      │
+      ▼
+Download Workflow Runs
+      │
+      ▼
+Check Duplicate Run IDs
+      │
+      ▼
+Calculate Workflow Duration
+      │
+      ▼
+Store into PostgreSQL
+      │
+      ▼
+Return Summary
+```
+
+### Internal Steps
+
+1. Calls GitHub REST API.
+2. Downloads workflow execution history.
+3. Checks whether the Run ID already exists.
+4. Skips duplicate workflow runs.
+5. Calculates workflow duration.
+6. Stores workflow details in PostgreSQL.
+
+### Sample Response
+
+```json
+{
+    "new_runs_added":20,
+    "duplicates_skipped":5
+}
+```
+
+### Why POST?
+
+Because this endpoint modifies database records.
+
+---
+
+## 5. Workflow Dashboard
 
 ```
 GET /workflows
 ```
 
-Displays all workflow runs stored in PostgreSQL.
+### Purpose
+
+Displays workflow history stored in PostgreSQL.
+
+### Flow
+
+```
+Browser
+      │
+GET /workflows
+      │
+Flask
+      │
+Read PostgreSQL
+      │
+Generate HTML Dashboard
+      │
+Browser
+```
+
+### Dashboard Displays
+
+- Workflow Name
+- Run ID
+- Branch
+- Event
+- Status
+- Conclusion
+- Triggered By
+- Workflow Duration
+- Created Time
+- GitHub Workflow Link
+
+### Status Colors
+
+🟩 Green → Success
+
+🟥 Light Red → Failure
+
+🟨 Yellow → Cancelled
+
+🟦 Blue → Running
 
 ---
 
-## How It Works
+# Running the Project
 
-1. GitHub Actions workflow starts.
-2. Docker Compose creates Flask and PostgreSQL containers.
-3. Flask connects to GitHub REST API.
-4. Workflow execution details are retrieved.
-5. Data is stored in PostgreSQL.
-6. Workflow dashboard displays execution history.
-
----
-
-## Running Locally
-
-Build and start containers
+## Build and Start Containers
 
 ```bash
 docker compose up --build
 ```
 
-Open
+---
 
-```
-http://localhost:5000/workflows
-```
-
-Synchronize latest workflow runs
+## Synchronize Workflow Runs
 
 ```
 POST http://localhost:5000/sync
@@ -193,43 +344,95 @@ POST http://localhost:5000/sync
 
 ---
 
-## GitHub Actions Pipeline
+## Open Dashboard
 
-The CI pipeline performs the following:
-
-- Checkout Repository
-- Build Docker Image
-- Start Containers
-- Verify Health Endpoint
-- Verify GitHub Configuration
-- Synchronize Workflow Runs
-- Verify Application
-- Display Container Logs
+```
+http://localhost:5000/workflows
+```
 
 ---
 
-## Key Learning Outcomes
+# GitHub Actions CI Pipeline
 
-- Docker Image creation
+The CI pipeline performs the following steps:
+
+1. Checkout Repository
+2. Build Docker Image
+3. Start Docker Containers
+4. Verify Application Health
+5. Verify GitHub Configuration
+6. Synchronize Workflow Runs
+7. Validate Application
+8. Display Container Logs
+
+---
+
+# Key Concepts Demonstrated
+
+- Docker Image Creation
 - Docker Compose
-- Multi-container applications
-- PostgreSQL integration
+- Multi-Container Applications
+- PostgreSQL Integration
+- SQLAlchemy ORM
 - Flask REST APIs
-- GitHub REST API
+- GitHub REST API Integration
 - GitHub Actions CI
-- Self-hosted GitHub Runner
+- Self Hosted GitHub Runner
+- Docker Volumes
 - Environment Variables
-- Persistent Docker Volumes
+- REST API Design
+- Duplicate Data Prevention
+- HTML Dashboard Generation
 
 ---
 
-## Future Enhancements
+# Future Enhancements
 
-- Workflow statistics dashboard
-- Success rate visualization
-- Average workflow duration
-- Search by workflow name
-- Filter by branch
-- Filter by status
-- Grafana dashboard integration
-- Deploy on AWS EC2
+- Workflow Statistics Dashboard
+- Average Workflow Duration
+- Success Rate Analytics
+- Filter by Branch
+- Filter by Status
+- Search Workflow Runs
+- Grafana Dashboard
+- AWS EC2 Deployment
+- Kubernetes Deployment
+- Scheduled Synchronization using Cron
+
+---
+
+# Interview Questions to Prepare
+
+### Why did you use Docker Compose?
+
+To orchestrate multiple containers (Flask and PostgreSQL) using a single configuration file and manage networking, volumes, and environment variables consistently.
+
+---
+
+### Why PostgreSQL?
+
+To persist workflow execution history so it remains available even after the Flask container restarts.
+
+---
+
+### Why did you calculate workflow duration?
+
+The GitHub API provides only `created_at` and `updated_at` timestamps. I calculated the duration once during synchronization and stored it, making later reporting and analytics faster.
+
+---
+
+### Why use POST for `/sync`?
+
+Because it changes application state by inserting new workflow records into the database.
+
+---
+
+### Why use GitHub Run ID?
+
+GitHub guarantees each workflow run has a unique Run ID, making it an ideal key to prevent duplicate records.
+
+---
+
+### Why use a self-hosted runner?
+
+To execute GitHub Actions directly on my laptop, leveraging the locally installed Docker Desktop and enabling local verification of the application while learning.
